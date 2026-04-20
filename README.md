@@ -4,7 +4,7 @@ A lightweight, drag-and-drop Windows utility that converts Microsoft PowerPoint 
 
 ## 📥 Download
 
-1. Go to the [Releases](/releases) page.
+1. Go to the [Releases](https://github.com/rishit537/PPTtoPDF/releases/) page.
 2. Download the latest `PPTtoPDF.exe` file.
 3. Place it on your Desktop or anywhere convenient.
 
