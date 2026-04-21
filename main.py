@@ -4,26 +4,31 @@ import sys
 import win32com.client
 from msvcrt import getch
 
-
 convertedFiles = []
 
 
 def convertFile(powerpoint, file: Path):
     output_path = file.with_suffix(".pdf")
-    presentation = powerpoint.Presentations.Open(str(file))
     try:
-        presentation.SaveAs(str(output_path), 32)
-        convertedFiles.append(file)
+        presentation = powerpoint.Presentations.Open(str(file))
     except Exception as e:
-        print(f"Error: {e}")
-    presentation.Close()
-    print(f'Saved: "{output_path}"')
+        print(f'\nError opening "{file}": {e}\n')
+        return
+
+    try:
+        presentation.SaveAs(str(output_path), 32)  # 32 = PDF
+        convertedFiles.append(file)
+        print(f'Saved: "{output_path}"')
+    except Exception as e:
+        print(f'\nError converting "{file}": {e}\n')
+    finally:
+        presentation.Close()
 
 
 def ppt_to_pdf(paths):
-
     powerpoint = win32com.client.Dispatch("Powerpoint.Application")
     print("Converting to pdf...")
+
     try:
         for p in paths:
             path = Path(p)
@@ -31,25 +36,30 @@ def ppt_to_pdf(paths):
                 for file in path.iterdir():
                     if file.is_file() and file.suffix.lower() in (".ppt", ".pptx"):
                         convertFile(powerpoint, file)
+
             elif path.is_file() and path.suffix.lower() in (".ppt", ".pptx"):
                 convertFile(powerpoint, path)
-    except Exception as e:
-        print(f"Error: {e}")
+
     finally:
         try:
             powerpoint.Quit()
-        except Exception as e:
+        except Exception:
             pass
-    print("Delete PPT/PPTX file(s) for converted PDF files? (y/n)")
-    confirmDelete = getch().decode().lower()
-    if confirmDelete.lower() == "y":
-        print("Cleaning up...")
-        for file in convertedFiles:
-            os.remove(str(file))
-            print(f"Deleted: {file}")
-    else:
-        print("Skipping clean-up...")
-    print("Done.")
+
+    if len(convertedFiles) > 0:
+        print("Delete PPT/PPTX file(s) for converted PDF files? (y/n)")
+        confirmDelete = getch().decode().lower()
+        if confirmDelete == "y":
+            print("Cleaning up...")
+            for file in convertedFiles:
+                try:
+                    os.remove(str(file))
+                    print(f"Deleted: {file}")
+                except Exception as e:
+                    print(f'Error deleting "{file}": {e}')
+        else:
+            print("Skipping clean-up...")
+        print("Done.")
 
 
 if __name__ == "__main__":
@@ -59,7 +69,7 @@ if __name__ == "__main__":
         print(
             "Enter the path to a file or directory (all Powerpoint files in the directory will be converted to pdf):"
         )
-        inputPath = [Path(input().replace('"', ""))]
+        inputPath = [input().replace('"', "")]
 
     ppt_to_pdf(inputPath)
     print("\nPress any key to exit...")
