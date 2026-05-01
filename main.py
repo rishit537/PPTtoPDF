@@ -84,7 +84,7 @@ if __name__ == "__main__":
         print(
             "Enter the path to a file or directory (all Powerpoint files in the directory will be converted to pdf):"
         )
-        inputPath = [input().replace('"', "")]
+        inputPath = [input().strip('"').strip("'")]
 
     ppt_to_pdf(inputPath)
     print("\nPress enter to exit...")
