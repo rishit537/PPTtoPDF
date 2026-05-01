@@ -1,5 +1,4 @@
 from pathlib import Path
-import os
 import sys
 import platform
 import subprocess
@@ -9,9 +8,8 @@ convertedFiles = []
 
 
 def convertFile(powerpoint, file: Path, current_os=current_os):
-    if (current_os == "Windows"):
-        import win32com.client
-        from msvcrt import getch
+    # For Windows, use Powerpoint to convert to PDF
+    if current_os == "Windows":
         output_path = file.with_suffix(".pdf")
         try:
             presentation = powerpoint.Presentations.Open(str(file))
@@ -25,11 +23,27 @@ def convertFile(powerpoint, file: Path, current_os=current_os):
         except Exception as e:
             print(f'\nError converting "{file}": {e}\n')
         finally:
-            presentation.Close()
-    elif (current_os=="Linux"):
+            try:
+                presentation.Close()
+            except:
+                pass
+
+    # For Linux, use LibreOffice in headless mode to convert to PDF
+    elif current_os == "Linux":
         output_path = file.with_suffix(".pdf")
         try:
-            subprocess.run(["libreoffice", "--headless", "--convert-to", "pdf", str(file), "--outdir", str(output_path.parent)], check=True)
+            subprocess.run(
+                [
+                    "libreoffice",
+                    "--headless",
+                    "--convert-to",
+                    "pdf",
+                    str(file),
+                    "--outdir",
+                    str(output_path.parent),
+                ],
+                check=True,
+            )
             if output_path.exists():
                 convertedFiles.append(file)
                 print(f'Saved: "{output_path}"')
@@ -40,42 +54,53 @@ def convertFile(powerpoint, file: Path, current_os=current_os):
 
 
 def ppt_to_pdf(paths, current_os=current_os):
-        if (current_os == "Windows"):
-            import win32com.client
-            from msvcrt import getch
-            powerpoint = win32com.client.Dispatch("Powerpoint.Application")
-            print("Converting to pdf...")
+    print("Converting to pdf...")
 
+    # Open powerpoint if the os is Windows
+    if current_os == "Windows":
+        import win32com.client
+
+        global powerpoint
+        powerpoint = win32com.client.Dispatch("Powerpoint.Application")
+
+    # Convert each file to pdf
+    try:
+        for p in paths:
+            path = Path(p)
+            if path.is_dir():
+                for (
+                    file
+                ) in path.iterdir():  # Iterate through the contents of the directory
+                    if file.is_file() and file.suffix.lower() in (".ppt", ".pptx"):
+                        convertFile(powerpoint=powerpoint, file=file)
+
+            elif path.is_file() and path.suffix.lower() in (".ppt", ".pptx"):
+                convertFile(powerpoint if current_os == "Windows" else None, path)
+
+    # Attempt to close PPT
+    finally:
         try:
-            for p in paths:
-                path = Path(p)
-                if path.is_dir():
-                    for file in path.iterdir():
-                        if file.is_file() and file.suffix.lower() in (".ppt", ".pptx"):
-                            convertFile(powerpoint, file)
-
-                elif path.is_file() and path.suffix.lower() in (".ppt", ".pptx"):
-                    convertFile(powerpoint if current_os == "Windows" else None, path)
-
-        finally:
-            try:
+            if current_os == "Windows":
                 powerpoint.Quit()
-            except Exception:
-                pass
-        if len(convertedFiles) > 0:
-            print("Delete PPT/PPTX file(s) for converted PDF files? (y/n)")
-            confirmDelete = input().lower()
-            if confirmDelete == "y":
-                print("Cleaning up...")
-                for file in convertedFiles:
-                    try:
-                        os.remove(str(file))
-                        print(f"Deleted: {file}")
-                    except Exception as e:
-                        print(f'Error deleting "{file}": {e}')
-            else:
-                print("Skipping clean-up...")
-            print("Done.")
+        except Exception:
+            pass
+
+    # Provide the option to delete the original PPT file
+    if len(convertedFiles) > 0:
+        print("Delete PPT/PPTX file(s) for converted PDF files? (y/n)")
+        confirmDelete = input().lower()
+        if confirmDelete == "y":
+            print("Cleaning up...")
+            for file in convertedFiles:
+                try:
+                    file.unlink()
+                    print(f'Deleted: "{file}"')
+                except Exception as e:
+                    print(f'Error deleting "{file}": {e}')
+        else:
+            print("Skipping clean-up...")
+        print("Done.")
+
 
 if __name__ == "__main__":
     inputPath = sys.argv[1:]
