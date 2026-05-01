@@ -9,7 +9,7 @@ convertedFiles = []
 
 
 def convertFile(powerpoint, file: Path, current_os=current_os):
-    if (current_os=="Windows"):
+    if (current_os == "Windows"):
         import win32com.client
         from msvcrt import getch
         output_path = file.with_suffix(".pdf")
@@ -18,7 +18,6 @@ def convertFile(powerpoint, file: Path, current_os=current_os):
         except Exception as e:
             print(f'\nError opening "{file}": {e}\n')
             return
-
         try:
             presentation.SaveAs(str(output_path), 32)  # 32 = PDF
             convertedFiles.append(file)
@@ -41,11 +40,11 @@ def convertFile(powerpoint, file: Path, current_os=current_os):
 
 
 def ppt_to_pdf(paths, current_os=current_os):
-    if (current_os=="Windows"):
-        import win32com.client
-        from msvcrt import getch
-        powerpoint = win32com.client.Dispatch("Powerpoint.Application")
-        print("Converting to pdf...")
+        if (current_os == "Windows"):
+            import win32com.client
+            from msvcrt import getch
+            powerpoint = win32com.client.Dispatch("Powerpoint.Application")
+            print("Converting to pdf...")
 
         try:
             for p in paths:
@@ -56,7 +55,7 @@ def ppt_to_pdf(paths, current_os=current_os):
                             convertFile(powerpoint, file)
 
                 elif path.is_file() and path.suffix.lower() in (".ppt", ".pptx"):
-                    convertFile(powerpoint, path)
+                    convertFile(powerpoint if current_os == "Windows" else None, path)
 
         finally:
             try:
@@ -65,7 +64,7 @@ def ppt_to_pdf(paths, current_os=current_os):
                 pass
         if len(convertedFiles) > 0:
             print("Delete PPT/PPTX file(s) for converted PDF files? (y/n)")
-            confirmDelete = getch().decode().lower()
+            confirmDelete = input().lower()
             if confirmDelete == "y":
                 print("Cleaning up...")
                 for file in convertedFiles:
@@ -77,21 +76,6 @@ def ppt_to_pdf(paths, current_os=current_os):
             else:
                 print("Skipping clean-up...")
             print("Done.")
-    elif (current_os=="Linux"):
-        print("Converting to pdf...")
-        for p in paths:
-            path = Path(p)
-            if path.is_dir():
-                for file in path.iterdir():
-                    if file.is_file() and file.suffix.lower() in (".ppt", ".pptx"):
-                        convertFile(None, file, current_os)
-
-            elif path.is_file() and path.suffix.lower() in (".ppt", ".pptx"):
-                convertFile(None, path, current_os)
-        print("Done.")
-    else:
-        print(f"Unsupported OS: {current_os}. Only Windows and Linux are supported.")
-
 
 if __name__ == "__main__":
     inputPath = sys.argv[1:]
